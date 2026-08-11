@@ -1,0 +1,53 @@
+New Development:
+Built FastAPI for PDU (power distribution Unit) - attached Proposed code flow document for start building code
+very simple FastAPI code - four 
+1. auth, 2.mqtt config, 3. status (bat+chgr basic info), 4. remote shutoff
+there is no DB , logging now
+1. start FastAPI code with authentication API key like below and also attached complete reference code folder for reference and decoder token is "VISICS" as same as reference
+def verify_acv_token(token: str = Depends(oauth2_scheme)):
+    if token is None:
+        raise credentials_exception
+    try:
+        payload = jwt.decode(token, "visics", algorithms=[ALGORITHM])
+        exp = payload.get("exp")
+        # Convert expiration time to a timezone-aware datetime object
+        exp_time = datetime.fromtimestamp(exp, tz=timezone.utc)
+ 
+        if datetime.now(timezone.utc) > exp_time:
+            raise token_expire_exception
+        return payload
+    except InvalidTokenError:
+        raise credentials_exception
+
+refer to smart_control_module for building fastapi for get auth \
+
+2. and also config API for mqtt - refer to smart_control_module how mqtt api used for config
+
+
+{
+  "broker": "192.168.1.100",
+  "port": 1883,
+  "broker_username":"ADC",
+  "broker_password":"df"    
+  "battery_topic": "PDU/<hostname>/batteryData",
+}
+
+
+3. api/status get all basic information mentioned on proposal pdf on request basis
+
+{
+  "hostname": "pdu-bbb-001",
+  "mac_address": "XX:XX:XX:XX:XX:XX",
+  "timestamp": "2026-08-10T13:20:30Z",
+  "battery_percentage": 82,
+  "battery_state": "Discharging",
+  "system_voltage": 51.8,
+  "load_current": 4.2,
+  "battery_charging_current": 11,
+  "battery_capacity_in_min": 120,
+  "time_since_boot_in_sec": 2340   
+}
+
+4. use emc_board.py code for remote shutoff when this API call hit - call turn_off_all method in emc_board.py code only with request of username, turn_off command, timestamp as request
+
+i want to built this fastAPI code very simple level without making it to complicated

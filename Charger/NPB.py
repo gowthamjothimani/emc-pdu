@@ -5,8 +5,8 @@ from typing import Optional, Dict, Any, List
 from charger_address import ChargerAddress
 from can_communication import CANCommunication, CANCommError
 
-class NPB1200_Charger:
-    _instances: Dict[str, "NPB1200_Charger"] = {}
+class NPB_Charger:
+    _instances: Dict[str, "NPB_Charger"] = {}
     _lock = threading.Lock()
     _is_initialized = False
 
@@ -23,7 +23,7 @@ class NPB1200_Charger:
     def __init__(self, channel: str = "can1", address: int = 0x03,
                  bitrate: int = 250000, timeout: float = 1.0,
                  retry_count: int = 3, chgr_type: str = "1"):
-        NPB1200_Charger._is_initialized = True
+        NPB_Charger._is_initialized = True
         if self._constructed:
             return
 
@@ -75,11 +75,12 @@ class NPB1200_Charger:
         self.last_comm_timestamp: Optional[float] = None
         self._data_lock = threading.Lock()
 
-    def init_device(self) -> bool:
+    def start_device(self) -> bool:
         if not self.comm.interface_exists():
             self.success = False
             self.status = f"CAN interface '{self.channel}' not found"
             self.charger_initialized = False
+            self.isInitialized = False
             print(self.status)
             return False
 
@@ -87,47 +88,51 @@ class NPB1200_Charger:
             self.success = False
             self.status = self.comm.last_error or "Failed to open CAN bus"
             self.charger_initialized = False
+            self.isInitialized = False
             print(self.status)
             return False
 
         try:
-            mfr_ok = self.read_mfr_info()
-            model_ok = self.read_model_name()
-            self.read_firmware_version()          # best effort, not required
-            serial_ok = self.read_serial_number()
+            self.read_mfr_info()
+            self.read_model_name()
+            self.read_firmware_version()
+            self.read_serial_number()
 
-            if not (mfr_ok and model_ok and serial_ok):
-                self.success = False
-                self.status = "Charger did not respond to identification requests"
-                self.charger_initialized = False
-                print(self.status)
-                self.comm.disconnect()
-                return False
+            if not self.chgr_model_name:
+                self.chgr_model_name = "UNKNOWN"
+            if not self.chgr_serial_number:
+                self.chgr_serial_number = "UNKNOWN"
+            if not self.chgr_firmware_version:
+                self.chgr_firmware_version = "UNKNOWN"
+            if not self.chgr_mfr_name:
+                self.chgr_mfr_name = "UNKNOWN"
 
             self.success = True
             self.status = "initialized"
             self.charger_initialized = True
+            self.isInitialized = True
             self.last_comm_timestamp = time.time()
 
-            self.start_device()
+            print(
+                "Charger '%s' (SN %s) ready on %s (tx=0x%X rx=0x%X)"
+                % (
+                    self.chgr_model_name,
+                    self.chgr_serial_number,
+                    self.channel,
+                    self.comm.tx_id,
+                    self.comm.rx_id,
+                )
+            )
             return True
 
         except Exception as exc:
             self.success = False
-            self.status = f"init_device error: {exc}"
+            self.status = f"start_device error: {exc}"
             self.charger_initialized = False
+            self.isInitialized = False
             print(self.status)
             self.comm.disconnect()
             return False
-
-    def start_device(self):
-        if not self.comm.connected:
-            raise CANCommError("start_device() called before comm.connect()")
-        print(
-            "Charger '%s' (SN %s) ready on %s (tx=0x%X rx=0x%X)",
-            self.chgr_model_name, self.chgr_serial_number, self.channel,
-            self.comm.tx_id, self.comm.rx_id,
-        )
 
     def stop_device(self):
         self.comm.disconnect()
@@ -173,7 +178,7 @@ class NPB1200_Charger:
             print("write_operation: CAN write failed")
             return False
 
-        time.sleep(0.3)  # allow the charger to apply and settle
+        time.sleep(0.3)  
         confirmed = self.read_operation()
         expected = "ON" if state else "OFF"
 
@@ -292,7 +297,7 @@ class NPB1200_Charger:
 
         with self._data_lock:
             self.chgr_firmware_version = version
-        return True  # firmware string may legitimately be empty on some units
+        return True  
 
     def read_serial_number(self) -> bool:
         addr = self.chargerAddress
@@ -370,106 +375,123 @@ class NPB1200_Charger:
         return result
 
     def read_data(self) -> Dict[str, Any]:
-        # --- CAN interface health check first: no point issuing SDO reads on a dead bus ---
+        timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
+
         try:
+            # --- CAN interface health check first: no point issuing reads on a dead bus ---
             if not self.comm.interface_exists():
                 self.success = False
                 self.status = "CAN_INTERFACE_DOWN"
                 self.charger_initialized = False
-                gdr_error = {
-                    "success": False,
-                    "status": "CAN_INTERFACE_DOWN",
-                    "device_type": "NPB1200_CHARGER",
-                    "error_code": "CAN001",
-                    "error_message": f"CAN interface {self.channel} is down",
-                    "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                print(f"CAN interface {self.channel} is down")
+                return {
+                    "pdu_chgr": {
+                        "timestamp": timestamp,
+                        "chgr_model_name": "",
+                        "chgr_status": "inactive",
+                        "chgr_can_params": [],
+                        "chgr_response": [],
+                        "chgr_error": {
+                            "chgr_error_message": "CAN_INTERFACE_DOWN",
+                            "chgr_error_code": "CAN001",
+                        },
+                    }
                 }
-                print(gdr_error["error_message"])
-                return gdr_error
 
             if not self.charger_initialized:
-                if not self.init_device():
+                if not self.start_device():
                     self.success = False
                     self.status = "DEVICE_NOT_RESPONDING"
-                    gdr_error = {
-                        "success": False,
-                        "status": "DEVICE_NOT_RESPONDING",
-                        "device_type": "NPB1200_CHARGER",
-                        "error_code": "CAN002",
-                        "error_message": self.status if isinstance(self.status, str)
-                        else "Charger did not respond to identification requests",
-                        "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                    print(f"Charger did not respond on {self.channel}")
+                    return {
+                        "pdu_chgr": {
+                            "timestamp": timestamp,
+                            "chgr_model_name": "",
+                            "chgr_status": "inactive",
+                            "chgr_can_params": [],
+                            "chgr_response": [],
+                            "chgr_error": {
+                                "chgr_error_message": "DEVICE_NOT_RESPONDING",
+                                "chgr_error_code": "CAN002",
+                            },
+                        }
                     }
-                    print(gdr_error["error_message"])
-                    return gdr_error
 
             # --- live reads / decode (unchanged logic, same helper methods) ---
             operation = self.read_operation()
             op_data = self.read_operating_data()
             fault = self.read_fault_status()
-            chg_status = self.read_charger_status()
-            sys_status = self.read_system_status()
 
             self.last_comm_timestamp = time.time()
             self.success = True
             self.status = "ok"
 
-            chgr_can_params = {
-                "chgr_status": operation,
-                "chgr_vin_AC": f"{op_data.get('vin')}V" if op_data.get("vin") is not None else None,
+            # Only real hardware faults (FAULT_STATUS register) are surfaced here -
+            # chg_status / system_status carry normal operating-mode flags, not faults.
+            active_faults = fault.get("active_faults") or []
+
+            pdu_chgr = {
+                "timestamp": timestamp,
+                "chgr_model_name": self.chgr_model_name or "",
                 "chgr_vout_DC": f"{op_data.get('vout')}V" if op_data.get("vout") is not None else None,
                 "chgr_iout": f"{op_data.get('iout')}A" if op_data.get("iout") is not None else None,
                 "chgr_temp": f"{op_data.get('temperature')}\u00b0C" if op_data.get("temperature") is not None else None,
             }
 
-            chgr_response = {
-                "fault_status_code": fault.get("code"),
-                "fault_message": fault.get("message"),
-                "chgr_status_code": chg_status.get("code"),
-                "chgr_status_message": chg_status.get("message"),
-                "system_status_code": sys_status.get("code"),
-                "system_status_message": sys_status.get("message"),
-            }
+            vin_value = op_data.get("vin")
+            model_name = (self.chgr_model_name or "").upper()
+            if vin_value not in (None, 0.0) and "1200-48" in model_name:
+                pdu_chgr["chgr_vin_AC"] = f"{vin_value}V"
 
-            gdr_out_data = {
-                "pdu_chgr": {
-                    "chgr_model_name": self.chgr_model_name,
-                    "chgr_type": self.chgr_type,
-                    "chgr_serial_number": self.chgr_serial_number,
-                    "chgr_firmware_version": self.chgr_firmware_version,
-                    "chgr_status": "active" if operation == "ON" else "inactive",
-                    "chgr_can_params": chgr_can_params,
-                    "chgr_response": chgr_response,
+            if active_faults:
+                pdu_chgr["chgr_response_code"] = [
+                    {"charger_fault_code": f["charger_fault_code"], "fault_message": f["fault_message"]}
+                    for f in active_faults
+                ]
+                pdu_chgr["chgr_error"] = {
+                    "chgr_error_message": "; ".join(f["fault_message"] for f in active_faults),
+                    "chgr_error_code": ", ".join(f["application_code"] for f in active_faults),
                 }
-            }
-            return gdr_out_data
+            else:
+                # no fault - chgr_response_code is omitted entirely, chgr_error stays empty
+                pdu_chgr["chgr_error"] = {}
+
+            return {"pdu_chgr": pdu_chgr}
 
         except CANCommError as exc:
             print("read_data failed - CAN comm error:", exc)
             self.success = False
             self.status = "CAN_INTERFACE_DOWN"
             self.charger_initialized = False  # force re-init on next call
-            gdr_error = {
-                "success": False,
-                "status": "CAN_INTERFACE_DOWN",
-                "device_type": "NPB1200_CHARGER",
-                "error_code": "CAN001",
-                "error_message": str(exc),
-                "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+            return {
+                "pdu_chgr": {
+                    "timestamp": timestamp,
+                    "chgr_model_name": "",
+                    "chgr_status": "inactive",
+                    "chgr_can_params": [],
+                    "chgr_response": [],
+                    "chgr_error": {
+                        "chgr_error_message": "CAN_INTERFACE_DOWN",
+                        "chgr_error_code": "CAN001",
+                    },
+                }
             }
-            return gdr_error
 
         except Exception as exc:
             print("read_data failed:", exc)
             self.success = False
             self.status = f"read_data error: {exc}"
             self.charger_initialized = False  # force re-init on next call
-            gdr_error = {
-                "success": False,
-                "status": "READ_FAILURE",
-                "device_type": "NPB1200_CHARGER",
-                "error_code": "CAN003",
-                "error_message": str(exc),
-                "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+            return {
+                "pdu_chgr": {
+                    "timestamp": timestamp,
+                    "chgr_model_name": "",
+                    "chgr_status": "inactive",
+                    "chgr_can_params": [],
+                    "chgr_response": [],
+                    "chgr_error": {
+                        "chgr_error_message": "CAN_READ_FAILURE",
+                        "chgr_error_code": "CAN003",
+                    },
+                }
             }
-            return gdr_error

@@ -1,0 +1,7 @@
+{
+  "broker": "10.30.250.241",
+  "port": 1883,
+  "broker_username": "admin",
+  "broker_password": "admin",
+  "battery_topic": "PDU/<hostname>/batteryData"
+}
