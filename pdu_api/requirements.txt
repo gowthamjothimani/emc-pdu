@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-PyJWT
-pydantic
-psutil
-paho-mqtt
-python-can

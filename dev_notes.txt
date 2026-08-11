@@ -1,9 +1,7 @@
 New Development:
-Built FastAPI for PDU (power distribution Unit) - attached Proposed code flow document for start building code
-very simple FastAPI code - four 
-1. auth, 2.mqtt config, 3. status (bat+chgr basic info), 4. remote shutoff
-there is no DB , logging now
-1. start FastAPI code with authentication API key like below and also attached complete reference code folder for reference and decoder token is "VISICS" as same as reference
+Need to Built FastAPI for PDU (power distribution Unit) - attached Proposed code flow document for start building code - there are only four API used in entire app 1. auth, 2.mqtt config, 3. status (bat+chgr basic info), 4. remote shutoff
+lets start very simple FastAPI code - there is no DB , logging now
+1. AUTH API: start FastAPI code with authentication API key like below and also attached complete reference code folder for reference and decoder token is "VISICS" as same as reference
 def verify_acv_token(token: str = Depends(oauth2_scheme)):
     if token is None:
         raise credentials_exception
@@ -21,19 +19,28 @@ def verify_acv_token(token: str = Depends(oauth2_scheme)):
 
 refer to smart_control_module for building fastapi for get auth \
 
-2. and also config API for mqtt - refer to smart_control_module how mqtt api used for config
+2. MQTT Config API:  config API for mqtt - refer to smart_control_module how mqtt api used for config ( for testing there is no username & password)
 
-
+POST: (for configuring new broker info) - hardcode default broker info - change only if new info comes in POST API request
 {
   "broker": "192.168.1.100",
   "port": 1883,
-  "broker_username":"ADC",
-  "broker_password":"df"    
-  "battery_topic": "PDU/<hostname>/batteryData",
+  "broker_username":,
+  "broker_password":"    
 }
 
+response:
+{
+  "broker": "192.168.1.100",
+  "port": 1883,
+  "broker_username":,
+  "broker_password":",
+ "battery_topic": "PDU/<hostname>/batteryData",    
+ "charger_topic": "PDU/<hostname>/chargerData",
+}
 
-3. api/status get all basic information mentioned on proposal pdf on request basis
+3. api/status get all basic information mentioned on proposal pdf on request basis (which is combined & filtered data from battery and charger) - to get this need to run the battery & charger code 
+so remove main.py code from both unit and control of both device will be on fastapi main.py code and final json not be separate battery & charger 
 
 {
   "hostname": "pdu-bbb-001",

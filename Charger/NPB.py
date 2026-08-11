@@ -388,9 +388,9 @@ class NPB_Charger:
                     "pdu_chgr": {
                         "timestamp": timestamp,
                         "chgr_model_name": "",
-                        "chgr_status": "inactive",
-                        "chgr_can_params": [],
-                        "chgr_response": [],
+                        "chgr_vout_DC": 0.0,
+                        "chgr_iout": 0.0,
+                        "chgr_temp": 0.0,
                         "chgr_error": {
                             "chgr_error_message": "CAN_INTERFACE_DOWN",
                             "chgr_error_code": "CAN001",
@@ -407,9 +407,9 @@ class NPB_Charger:
                         "pdu_chgr": {
                             "timestamp": timestamp,
                             "chgr_model_name": "",
-                            "chgr_status": "inactive",
-                            "chgr_can_params": [],
-                            "chgr_response": [],
+                            "chgr_vout_DC": 0.0,
+                            "chgr_iout": 0.0,
+                            "chgr_temp": 0.0,
                             "chgr_error": {
                                 "chgr_error_message": "DEVICE_NOT_RESPONDING",
                                 "chgr_error_code": "CAN002",
@@ -467,9 +467,9 @@ class NPB_Charger:
                 "pdu_chgr": {
                     "timestamp": timestamp,
                     "chgr_model_name": "",
-                    "chgr_status": "inactive",
-                    "chgr_can_params": [],
-                    "chgr_response": [],
+                    "chgr_vout_DC": 0.0,
+                    "chgr_iout": 0.0,
+                    "chgr_temp": 0.0,
                     "chgr_error": {
                         "chgr_error_message": "CAN_INTERFACE_DOWN",
                         "chgr_error_code": "CAN001",
@@ -486,9 +486,9 @@ class NPB_Charger:
                 "pdu_chgr": {
                     "timestamp": timestamp,
                     "chgr_model_name": "",
-                    "chgr_status": "inactive",
-                    "chgr_can_params": [],
-                    "chgr_response": [],
+                    "chgr_vout_DC": 0.0,
+                    "chgr_iout": 0.0,
+                    "chgr_temp": 0.0,
                     "chgr_error": {
                         "chgr_error_message": "CAN_READ_FAILURE",
                         "chgr_error_code": "CAN003",
