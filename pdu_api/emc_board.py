@@ -1,20 +1,14 @@
+import Adafruit_BBIO.GPIO as GPIO
+from smbus2 import SMBus
+
 class EMC_Board:
     def __init__(self, hardware_provider="VISICS"):
         self.I2C_BUS = 2
         self.SLAVE_ADDR = 0x58
-        self.bits = 0b10000000
+        self.bits = 0x00
         self.hardware_provider = hardware_provider
         self.hardware_available = True
         self.last_error = None
-
-        try:
-            import Adafruit_BBIO.GPIO as GPIO
-            from smbus2 import SMBus
-        except ImportError as exc:
-            self.hardware_available = False
-            self.last_error = str(exc)
-            return
-
         self._gpio = GPIO
         self._smbus_cls = SMBus
 
@@ -27,23 +21,17 @@ class EMC_Board:
             self.last_error = str(exc)
             return
 
-        self.reset()
+        # Do not force the MAX7320 state during object creation.
+        # A startup write here is what turns the PDU outputs off before
+        # the application intentionally sends a shutdown command.
 
     def reset(self):
-        self.bits = 0b10000000
+        self.bits = 0x00
         return self.write_max7320_zero(self.bits)
 
     def turn_off_all(self):
         self.bits = 0x00
         return self.write_max7320_zero(self.bits)
-
-    def remote_shutoff(self):
-        ok = self.turn_off_all()
-        return {
-            "success": ok,
-            "status": "shutdown_initiated" if ok else "shutdown_failed",
-            "detail": self.last_error or "All outputs turned off",
-        }
 
     def write_max7320_zero(self, bits):
         if not self.hardware_available:
@@ -78,7 +66,3 @@ class EMC_Board:
         raise ValueError("Bit position must be between 0 and 7.")
 
 
-if __name__ == "__main__":
-    controller = EMC_Board()
-    controller.turn_off_all()
-    print("All outputs OFF")
