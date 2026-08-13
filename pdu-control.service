@@ -1,0 +1,29 @@
+[Unit]
+Description=PDU API and CAN1 Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+
+User=root
+Group=root
+
+WorkingDirectory=/root/emc-pdu/pdu_api
+
+# Bring up CAN1 before starting FastAPI
+ExecStartPre=/sbin/ip link set can1 down
+ExecStartPre=/sbin/ip link set can1 up type can bitrate 250000
+
+# Start FastAPI
+ExecStart=/usr/bin/python3 /root/emc-pdu/pdu_api/main.py
+
+# Restart FastAPI if it crashes
+Restart=on-failure
+RestartSec=5
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
