@@ -12,7 +12,7 @@ from auth import (create_access_token,verify_token,)
 from mqtt_config import (get_mqtt_config,update_mqtt_config)
 from Battery.qhb import CAN_QHB
 from Charger.NPB import NPB_Charger
-from mqtt_publish import PDUMQTTPublisher
+from mqtt_publish import MQTTPublisher
 
 app = FastAPI(title="PDU API",version="1.0.0",)
 battery = CAN_QHB()
@@ -49,53 +49,49 @@ def get_mac_address():
 def get_time_since_boot():
     return int(time.clock_gettime(time.CLOCK_BOOTTIME))
 
-def get_latest_device_data():
-    with data_lock:
-        return (latest_battery_data,latest_charger_data)
-    
-mqtt_publisher = PDUMQTTPublisher(data_lock=data_lock,
-    data_provider=get_latest_device_data)
-
 def battery_task():
-    global latest_battery_data
     print("[PDU] Starting battery...")
     try:
         if not battery.init_device():
-            print("[PDU] Battery initialization failed")
+            print(
+                "[PDU] Battery initialization failed"
+            )
             return
-        
-        print("[PDU] Battery CAN initialized")
+        print(
+            "[PDU] Battery CAN initialized"
+        )
         battery.start_device()
-        while True:
-            try:
-                data = battery.read_data()
-                with data_lock:
-                    latest_battery_data = data
-            except Exception as exc:
-                print(f"[PDU] Battery read error: {exc}")
-            time.sleep(1)
-
     except Exception as exc:
-        print(f"[PDU] Battery thread error: {exc}")
+        print(
+            f"[PDU] Battery thread error: {exc}"
+        )
 
 def charger_task():
     global latest_charger_data
     print("[PDU] Starting charger...")
     try:
         if not charger.start_device():
-            print("[PDU] Charger initialization failed")
+            print(
+                "[PDU] Charger initialization failed"
+            )
             return
-        print("[PDU] Charger initialized")
+        print(
+            "[PDU] Charger initialized"
+        )
         while True:
             try:
                 data = charger.read_data()
                 with data_lock:
                     latest_charger_data = data
             except Exception as exc:
-                print(f"[PDU] Charger read error: {exc}")
+                print(
+                    f"[PDU] Charger read error: {exc}"
+                )
             time.sleep(2)
     except Exception as exc:
-        print(f"[PDU] Charger thread error: {exc}")
+        print(
+            f"[PDU] Charger thread error: {exc}"
+        )
 
 def update_battery_data():
     global latest_battery_data
@@ -108,6 +104,17 @@ def update_battery_data():
             f"[PDU] Battery read error: {exc}"
         )
 
+def get_latest_data():
+    with data_lock:
+        return {
+            "battery": latest_battery_data,
+            "charger": latest_charger_data,
+        }
+
+mqtt_publisher = MQTTPublisher(
+    data_lock=data_lock,
+    data_provider=get_latest_data
+)
 @app.post("/api/v1/auth/token")
 def login(request: LoginRequest):
     if (request.username != "admin" or request.password != "admin"):
@@ -134,14 +141,12 @@ def read_mqtt_config():
 def configure_mqtt(
     request: MQTTConfigRequest
 ):
-    config = update_mqtt_config(
+    return update_mqtt_config(
         broker=request.broker,
         port=request.port,
         broker_username=request.broker_username,
         broker_password=request.broker_password,
     )
-    mqtt_publisher.restart()
-    return config
 
 @app.post("/api/v1/remote-shutdown",dependencies=[Depends(verify_token)])
 def remote_shutdown(request: RemoteShutdownRequest):
@@ -176,7 +181,7 @@ def remote_shutdown(request: RemoteShutdownRequest):
 
 @app.get("/api/v1/status")
 def get_status():
-    global latest_battery_data, latest_charger_data
+    update_battery_data()
     with data_lock:
         batt_data = latest_battery_data
         chgr_data = latest_charger_data
@@ -192,9 +197,15 @@ def get_status():
         battery_percentage = battery.soc
         battery_state = battery.pack_state
         battery_voltage = battery.pack_voltage
-        battery_current = float(battery.pack_current)
-        battery_capacity_full = (battery.batt_capacity_full_ah)
-        battery_capacity_remaining = (battery.batt_capacity_remaining_ah)
+        battery_current = float(
+            battery.pack_current
+        )
+        battery_capacity_full = (
+            battery.batt_capacity_full_ah
+        )
+        battery_capacity_remaining = (
+            battery.batt_capacity_remaining_ah
+        )
 
     charger_current = 0.0
     charger_voltage = 0.0
@@ -204,7 +215,9 @@ def get_status():
             {}
         )
         # Charger output current
-        charger_current_raw = pdu_chgr.get("chgr_iout")
+        charger_current_raw = pdu_chgr.get(
+            "chgr_iout"
+        )
         if charger_current_raw is not None:
             try:
                 charger_current = float(
@@ -226,38 +239,38 @@ def get_status():
                     .strip()
                 )
 
-            except (ValueError,TypeError):
+            except (
+                ValueError,
+                TypeError
+            ):
                 charger_voltage = 0.0
 
+    # LOAD CURRENT
+
     if battery_state == "Charging":
-
-   
-     load_current = charger_current - battery_current
-
-     if load_current < 0:
-        load_current = 0.0
+        load_current = charger_current - battery_current
+        if load_current < 0:
+         load_current = 0.0
 
     elif battery_state == "Discharging":
-    # Battery alone supplies the load
         load_current = abs(battery_current)
 
     elif battery_state == "Ready":
-    # Battery is not supplying current.
-    # Charger supplies the PDU load.
      load_current = charger_current
 
     else:
-        load_current = 0.0
+     load_current = 0.0
 
-    load_current = round(load_current,1)
+    load_current = round(load_current,1
+    )
 
     battery_capacity_in_min = None
 
     if (battery_capacity_remaining is not None and load_current > 0):
         battery_capacity_in_min = int(
-            (float(battery_capacity_remaining) / load_current) * 60
-        )
-    
+        (float(battery_capacity_remaining)
+            / load_current) * 60)
+        
     timestamp = (datetime.now(timezone.utc)
         .isoformat()
         .replace("+00:00","Z"))
@@ -288,8 +301,10 @@ def startup():
     charger_thread.start()
     print("[PDU] Battery and charger " "threads started")
     mqtt_publisher.start()
-    print("[PDU] MQTT publisher started")
+    print("[PDU] MQTT publisher started")    
 
 # MAIN
 if __name__ == "__main__":
-    uvicorn.run(app,host="0.0.0.0",port=8000,)
+    uvicorn.run(app,host="0.0.0.0",port=8000)
+
+
