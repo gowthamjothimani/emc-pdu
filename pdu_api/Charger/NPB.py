@@ -2,8 +2,8 @@ import time
 import datetime
 import threading
 from typing import Optional, Dict, Any, List
-from charger_address import ChargerAddress
-from can_communication import CANCommunication, CANCommError
+from pdu_api.Charger.charger_address import ChargerAddress
+from pdu_api.Charger.can_communication import CANCommunication, CANCommError
 
 class NPB_Charger:
     _instances: Dict[str, "NPB_Charger"] = {}

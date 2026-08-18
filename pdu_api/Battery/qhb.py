@@ -5,7 +5,7 @@ import os
 import threading
 import struct
 import time
-from qhb_address import QHB_ADDRESS_MAP
+from pdu_api.Battery.qhb_address import QHB_ADDRESS_MAP
 
 class CAN_QHB:
 

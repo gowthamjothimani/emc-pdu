@@ -15,9 +15,7 @@ mqtt_config_lock = threading.Lock()
 
 
 def get_mqtt_config():
-
     with mqtt_config_lock:
-
         return {
             "broker": mqtt_config["broker"],
             "port": mqtt_config["port"],
@@ -31,22 +29,10 @@ def get_mqtt_config():
         }
 
 
-def update_mqtt_config(
-    broker,
-    port,
-    broker_username=None,
-    broker_password=None,
-):
-
+def update_mqtt_config(broker,port,broker_username=None,broker_password=None):
     with mqtt_config_lock:
-
         mqtt_config["broker"] = broker
         mqtt_config["port"] = port
-        mqtt_config["broker_username"] = (
-            broker_username
-        )
-        mqtt_config["broker_password"] = (
-            broker_password
-        )
-
+        mqtt_config["broker_username"] = (broker_username)
+        mqtt_config["broker_password"] = (broker_password)
     return get_mqtt_config()

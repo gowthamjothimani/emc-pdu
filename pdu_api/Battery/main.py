@@ -5,8 +5,8 @@ import threading
 import struct
 import time
 import paho.mqtt.client as mqtt
-from qhb import CAN_QHB
-from qhb_address import QHB_ADDRESS_MAP
+from pdu_api.Battery.qhb import CAN_QHB
+from pdu_api.Battery.qhb_address import QHB_ADDRESS_MAP
 
 mqtt_broker = "10.30.250.241"
 mqtt_port = 1883    

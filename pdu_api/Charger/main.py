@@ -1,7 +1,7 @@
 import json
 import time
 import paho.mqtt.client as mqtt
-from NPB import NPB_Charger
+from pdu_api.Charger.NPB import NPB_Charger
 
 mqtt_broker = "10.30.250.241"
 mqtt_port = 1883    
