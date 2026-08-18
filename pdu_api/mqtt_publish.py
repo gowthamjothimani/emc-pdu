@@ -52,16 +52,12 @@ class MQTTPublisher:
                 config.get("broker_password")
             )
 
-            print(
-                "[MQTT] Connected successfully"
-            )
+            print("[MQTT] Connected successfully")
 
             return True
         except Exception as exc:
             self.connected = False
-            print(
-                f"[MQTT] Connection failed: {exc}"
-            )
+            print(f"[MQTT] Connection failed: {exc}")
             self._disconnect()
             return False
 
@@ -79,14 +75,12 @@ class MQTTPublisher:
         self.connected = False
 
     def _config_changed(self, config):
-
         current_config = (
             config["broker"],
             config["port"],
             config.get("broker_username"),
             config.get("broker_password")
         )
-
         return current_config != self.last_config
 
     def _publish_data(self):
@@ -95,51 +89,30 @@ class MQTTPublisher:
         data = self.data_provider()
         if data is None:
             return
-        battery_data = data.get(
-            "battery"
-        )
-        charger_data = data.get(
-            "charger"
-        )
+        battery_data = data.get("battery")
+        charger_data = data.get("charger")
         config = get_mqtt_config()
 
         if battery_data is not None:
             try:
-                payload = json.dumps(
-                    battery_data
-                )
-                self.client.publish(
-                    config["battery_topic"],
-                    payload
-                )
+                payload = json.dumps(battery_data)
+                self.client.publish(config["battery_topic"],payload)
             except Exception as exc:
-                print(
-                    f"[MQTT] Battery publish error: {exc}"
-                )
+                print(f"[MQTT] Battery publish error: {exc}")
 
         if charger_data is not None:
             try:
-                payload = json.dumps(
-                    charger_data
-                )
-                self.client.publish(
-                    config["charger_topic"],
-                    payload
-                )
+                payload = json.dumps(charger_data)
+                self.client.publish(config["charger_topic"],payload)
             except Exception as exc:
-                print(
-                    f"[MQTT] Charger publish error: {exc}"
-                )
+                print(f"[MQTT] Charger publish error: {exc}")
 
     def _publisher_task(self):
         while self.running:
             try:
                 config = get_mqtt_config()
                 if self._config_changed(config):
-                    print(
-                        "[MQTT] MQTT configuration "
-                        "changed"
-                    )
+                    print("[MQTT] MQTT configuration ""changed")
                     self._disconnect()
                     self._connect(config)
 
@@ -149,9 +122,6 @@ class MQTTPublisher:
                     self._publish_data()
 
             except Exception as exc:
-                print(
-                    f"[MQTT] Publisher error: {exc}"
-                )
+                print(f"[MQTT] Publisher error: {exc}")
                 self.connected = False
-
             time.sleep(2)

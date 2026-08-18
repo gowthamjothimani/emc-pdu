@@ -13,7 +13,6 @@ mqtt_config = {
 
 mqtt_config_lock = threading.Lock()
 
-
 def get_mqtt_config():
     with mqtt_config_lock:
         return {
