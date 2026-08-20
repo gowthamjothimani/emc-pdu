@@ -5,7 +5,7 @@ import os
 import threading
 import struct
 import time
-from pdu_api.Battery.qhb_address import QHB_ADDRESS_MAP
+from .qhb_address import QHB_ADDRESS_MAP
 
 class CAN_QHB:
 
@@ -283,8 +283,8 @@ class CAN_QHB:
                         "batt_firmwareVersion": self.revision or "",
                         "batt_capacity": self.batt_capacity_full_ah,
                         "batt_status": "inactive",
-                        "batt_can_params": {},
-                        "batt_response": {},
+                        "batt_basic": {},
+                        "batt_advance": {},
                         "batt_error": batt_error,
                     }
                 }
@@ -309,8 +309,8 @@ class CAN_QHB:
                         "batt_firmwareVersion": self.revision or "",
                         "batt_capacity": self.batt_capacity_full_ah,
                         "batt_status": "inactive",
-                        "batt_can_params": {},
-                        "batt_response": {},
+                        "batt_basic": {},
+                        "batt_advance": {},
                         "batt_error": batt_error,
                     }
                 }
@@ -322,7 +322,7 @@ class CAN_QHB:
             self.success = True
             self.status = "ok"
 
-            batt_can_params = {
+            batt_basic = {
                 "batt_state": self.pack_state,
                 "batt_charger": "connected" if self.smart_charger else "disconnected",
                 "batt_soc": f"{self.soc}%",
@@ -333,7 +333,7 @@ class CAN_QHB:
                 "batt_temp_min": f"{self.min_temp}°C",
             }
 
-            batt_response = {
+            batt_advance = {
                 "batt_error_code": "0",
                 "batt_error_message": "No errors",
                 "batt_health": {
@@ -356,14 +356,14 @@ class CAN_QHB:
 
             return {
                 "pdu_batt": {
+                    "timestamp": currentTime,
                     "batt_name": "PDU Battery",
                     "batt_type": "1",
                     "batt_serialNumber": self.serial_number or "",
                     "batt_firmwareVersion": self.revision or "",
-                    "batt_capacity": self.batt_capacity_full_ah,
                     "batt_status": "active" if self.pack_state not in (None, "", "Unknown") else "inactive",
-                    "batt_can_params": batt_can_params,
-                    "batt_response": batt_response,
+                    "batt_basic": batt_basic,
+                    "batt_advance": batt_advance,
                     "batt_error": {},
                 }
             }
@@ -388,8 +388,8 @@ class CAN_QHB:
                     "batt_firmwareVersion": self.revision or "",
                     "batt_capacity": self.batt_capacity_full_ah,
                     "batt_status": "inactive",
-                    "batt_can_params": {},
-                    "batt_response": {},
+                    "batt_basic": {},
+                    "batt_advance": {},
                     "batt_error": batt_error,
                 }
             }
@@ -414,8 +414,8 @@ class CAN_QHB:
                     "batt_firmwareVersion": self.revision or "",
                     "batt_capacity": self.batt_capacity_full_ah,
                     "batt_status": "inactive",
-                    "batt_can_params": {},
-                    "batt_response": {},
+                    "batt_basic": {},
+                    "batt_advance": {},
                     "batt_error": batt_error,
                 }
             }
